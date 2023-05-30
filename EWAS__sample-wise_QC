@@ -1,0 +1,104 @@
+#### The code will process raw data from Illumina Infinium MethylationEPIC 850K assay
+
+module load R/4.0.5
+R --vanilla --no-save
+
+# Load library
+library(minfi)
+library(limma)
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+library(DMRcate)
+library(DMRcatedata)
+library(wateRmelon)
+library(RColorBrewer)
+library(ggplot2)
+library(patchwork)
+library(sva)
+library(maxprobes)
+library(MethylAid)
+
+# Get targets and EPIC annotation data
+targets <- "/data/ALS_50k/DNA_methylation/methylation/targets_EPIC.txt"
+targets <- read.table(targets, sep="\t", header=T)
+annEPIC <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+
+# Set output directory
+dir.create("outputQC")
+outputdir <- "/data/ALS_50k/DNA_methylation/methylation/outputQC/"
+
+# Run Methylaid from NoMachine
+data <- summarize(targets)
+visualize(data)
+
+# Read the raw data from the IDAT files (set extended=TRUE to get RGChannelSetExtended as required by wateRmelon package)
+rgSet <- read.metharray.exp(targets=targets, extended=TRUE, verbose=TRUE, force=TRUE)
+
+# Give the samples descriptive names                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+targets$ID <- targets$sampleID
+sampleNames(rgSet) <- targets$ID
+
+# Check observedSex-predictedSex match and filter out failed samples from targets and rgSet
+observedSex <- targets$Sex
+predictedSex <- pData(rgSet)$Sex
+failedSamples <- targets$sampleID[observedSex!=predictedSex]
+keep <- targets$sampleID[!targets$sampleID %in% failedSamples]
+targets <- targets[targets$sampleID %in% keep,]
+rgSet <- rgSet[,keep]
+write.table(failedSamples,file=paste(outputdir, "checkSex_failedSamples.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE) # Save output
+
+# Check bsiulfite conversion rate and filter out poor quality samples (bsc < 80%) from rgSet and targets
+bsc <- bscon(rgSet)
+failedSamples <- names(bsc)[bsc <= 80]
+keep <- names(bsc)[bsc > 80]
+targets <- targets[targets$sampleID %in% keep,]
+rgSet <- rgSet[,keep]
+write.table(failedSamples,file=paste(outputdir, "bisulfite_failedSamples.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE) # Save output
+
+# Exclude samples with average CpGs detection p-value >= 0.01 and remove poor quality samples
+detP <- detectionP(rgSet)
+failedSamples <- colnames(detP)[(colMeans(detP)>=0.01) == TRUE]
+keep <- colMeans(detP) < 0.01
+targets <- targets[keep,]
+rgSet <- rgSet[,keep]
+detP <- detP[,keep]
+write.table(failedSamples,file=paste(outputdir, "detP_failed_samples.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE) # Save output
+
+# Exclude outliers using outlyx function (wateRmelon)
+outliers <- outlyx(rgSet,iqr=TRUE, iqrP=2, pc=1, mv=TRUE, mvP=0.15, plot=TRUE)
+excluded_samples <- rownames(outliers)[outliers$outliers == TRUE]
+
+write.table(excluded_samples,file=paste(outputdir, "outliers_wateRmelon.txt", sep=""), 
+              sep="\t",col.names = FALSE, row.names = FALSE)
+
+# Remove poor quality samples from data
+
+keep <- rownames(outliers)[outliers$outliers == FALSE]
+
+targets <- targets[targets$sampleID %in% keep,]
+dim(targets)
+
+rgSet <- rgSet[,keep]
+rgSet
+
+detP <- detP[,keep]
+dim(detP)
+
+# 6. Fraction of probes with high detection P-values and/or measured by a low number of beads.  pfilter (wateRmelon)
+
+# Exclusion criteria (default setting):  
+# samples having 1 % of sites with a detection p-value greater than 0.05
+# sites with beadcount <3 in 5 % of samples 
+# sites having 1 % of samples with a detection p-value greater than 0.05
+
+rgSet <- pfilter(rgSet) 
+rgSet 
+
+keep <- colnames(rgSet)
+length(keep)
+
+excluded_samples <- targets$sampleID[!targets$sampleID %in% keep]
+write.table(excluded_samples,file=paste(outputdir, "pfilter_excluded_samples.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE)
+
+targets <- targets[targets$sampleID %in% keep,]
+dim(targets)
