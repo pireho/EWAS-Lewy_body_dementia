@@ -15,5 +15,38 @@ library(patchwork)
 library(sva)
 library(maxprobes)
 
+# Load data
+outputdir <- "/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/"
+load(file.path(outputdir, "QC_preNorm.Rda"))
+annEPIC <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+
+# Normalization (24 PCs -> 99% of variance)
+mSetSq <- preprocessFunnorm(rgSet, nPCs = 24) #preprocessQuantile to generate a GenomicRatioSet object
+mSetRaw <- preprocessRaw(rgSet)
+
+# Remove poor quality probes from detP and mSetSq (detection P-value > 0.01)
+detP <- detP[rownames(detP) %in% rownames(mSetSq),]
+keep <- rowSums(detP) < 0.01
+mSetSq <- mSetSq[rownames(mSetSq) %in% rownames(detP)]
+
+#Remove probes containing SNPs of any minor allele frequency
+mSetSq <- dropLociWithSnps(mSetSq, snps=c("SBE","CpG"), maf=0)
+
+# Remove probes on the sex chromosomes
+keep <- !(featureNames(mSetSq) %in% annEPIC$Name[annEPIC$chr %in% c("chrX","chrY")])
+mSetSq <- mSetSq[keep,]
+
+# Remove Illumina methylation array 450k cross-reactive probes (listed by Chen et al. https://doi.org/10.4161/epi.23470)
+dataDirectory <- "/data/ALS_50k/DNA_methylation/methylation/"
+xReactiveProbes <- read.csv(file=paste(dataDirectory,"48639-non-specific-probes-Illumina450k.csv",sep="/"), stringsAsFactors=FALSE)
+keep <- !(featureNames(mSetSq) %in% xReactiveProbes$TargetID)
+mSetSq <- mSetSq[keep,] 
+
+# Remove Illumina EPIC850K cross-reactive probes
+mSetSq <- maxprobes::dropXreactiveLoci(mSetSq)
+
+# Safe stopping point
+save(mSetSq, targets, file=file.path(outputdir, "QC_preBeta-M_values.Rda"))
+
 
 
