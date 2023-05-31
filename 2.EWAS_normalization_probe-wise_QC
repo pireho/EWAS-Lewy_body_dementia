@@ -20,7 +20,8 @@ outputdir <- "/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/"
 load(file.path(outputdir, "QC_preNorm.Rda"))
 annEPIC <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 
-# Normalization (24 PCs -> 99% of variance)
+# Normalization 
+# Setting nPC = 24 explaining 99% of variance, as shown by Lehne et al. Genome Biology (2015)  
 mSetSq <- preprocessFunnorm(rgSet, nPCs = 24) #preprocessQuantile to generate a GenomicRatioSet object
 mSetRaw <- preprocessRaw(rgSet)
 
