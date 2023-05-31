@@ -1,0 +1,19 @@
+module load R/4.0.5
+R --vanilla --no-save
+
+# Load library
+library(minfi)
+library(limma)
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+library(DMRcate)
+library(DMRcatedata)
+library(wateRmelon)
+library(RColorBrewer)
+library(ggplot2)
+library(patchwork)
+library(sva)
+library(maxprobes)
+
+
+
