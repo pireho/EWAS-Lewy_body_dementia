@@ -86,3 +86,8 @@ keep <- colnames(rgSet)
 targets <- targets[targets$sampleID %in% keep,]
 failedSamples <- targets$sampleID[!targets$sampleID %in% keep]
 write.table(failedSamples,file=paste(outputdir, "pfilter_excluded_samples.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE)
+
+##########################################################################################
+
+### Save data
+save(rgSet, detP, targets, file=file.path(outputdir, "QC_preNorm.Rda"))
