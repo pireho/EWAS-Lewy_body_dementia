@@ -45,7 +45,7 @@ mSetSq <- mSetSq[keep,]
 # Remove Illumina EPIC850K cross-reactive probes
 mSetSq <- maxprobes::dropXreactiveLoci(mSetSq)
 
-# Safe stopping point
+# Save data
 save(mSetSq, targets, file=file.path(outputdir, "QC_preBeta-M_values.Rda"))
 
 
