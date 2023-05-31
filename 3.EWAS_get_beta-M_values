@@ -24,10 +24,8 @@ outputdir <- paste(working_dir, "outputQC/", sep="")
 load(file.path(outputdir, "QC_preBeta-M_values.Rda"))
 
 # Get M and Beta values
-mVals <- getM(mSetSq)
-
 bVals <- getBeta(mSetSq)
-head(bVals)
+mVals <- getM(mSetSq)
 
 # Save data
 write.table(bVals, file=paste(outputdir,"bVals.csv", sep=""), sep=",", row.names=TRUE)
