@@ -1,7 +1,26 @@
+# Perform PCA on the control probes present on Illumina array.
 
+module load R/4.0.5
+R --vanilla --no-save
 
-# Perform PCA on the control probes present on array.
-# Samples that had values larger than 3.5 standard deviations of the mean on the first two principal components (PCs) were excluded.
+# Load library
+library(minfi)
+library(limma)
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+library(DMRcate)
+library(DMRcatedata)
+library(wateRmelon)
+library(RColorBrewer)
+library(ggplot2)
+library(patchwork)
+library(sva)
+library(maxprobes)
+library(MethylAid)
+
+# Load data
+outputdir <- "/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/"
+load(file.path(outputdir, "QC_preNorm.Rda"))
 
 for(i in 1:nrow(targets)) {
   print(paste(paste("Processing sample",i,sep=" "), paste("(",nrow(targets)-i," samples to go)", sep="")), sep = " ")
@@ -127,7 +146,6 @@ for(i in 1:nrow(targets)) {
   #detection p-values
   dp = detectionP(RGset, type = "m+u")
   
-  
   #add data for the new samples
   if(exists("TypeII.Red.All")) {
     TypeII.Red.All <- cbind(TypeII.Red.All,TypeII.Red)
@@ -156,3 +174,15 @@ for(i in 1:nrow(targets)) {
 pca <- prcomp(na.omit(ctrl.all))
 ctrlprobes.scores = pca$x
 colnames(ctrlprobes.scores) = paste(colnames(ctrlprobes.scores), '_cp', sep='')
+
+# Check variation explained by PC_cp
+ctrlprobes.scores_eigen <- eigen(cov(ctrlprobes.scores))
+ctrlprobes.scores_eigen$values
+
+# Make sure that the sum of the eigenvalues equals the total variance of the sample data
+all.equal(sum(ctrlprobes.scores_eigen$values), sum(apply(ctrlprobes.scores, MARGIN = 2, FUN = var)))
+
+# Compute the proportion of variance explained by each principal component
+ctrlprobes.scores.ve <- ctrlprobes.scores_eigen$values/sum(ctrlprobes.scores_eigen$values)
+ctrlprobes.scores.ve
+
