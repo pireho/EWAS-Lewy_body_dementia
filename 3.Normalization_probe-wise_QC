@@ -46,8 +46,12 @@ mSetSq <- mSetSq[keep,]
 # Remove Illumina EPIC850K cross-reactive probes
 mSetSq <- maxprobes::dropXreactiveLoci(mSetSq)
 
+# Get M and Beta values
+bVals <- getBeta(mSetSq)
+mVals <- getM(mSetSq)
+
 # Save data
 save(mSetSq, targets, file=file.path(outputdir, "QC_preBeta-M_values.Rda"))
-
-
-
+write.table(bVals, file=paste(outputdir,"bVals.csv", sep=""), sep=",", row.names=TRUE)
+write.table(mVals, file=paste(outputdir,"mVals.csv", sep=""), sep=",", row.names=TRUE)
+save(bVals, mVals, mSetSq, targets, file=file.path(outputdir, "getBeta_EPIC.Rda"))
