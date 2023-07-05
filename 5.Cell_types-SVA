@@ -32,6 +32,7 @@ outputdir <- "/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/"
 load(file.path(outputdir, "QC_preNorm.Rda"))
 load(file.path("/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/mSetSq_forSVA.Rda")) # Load mSetSq for SVA
 mSetSq <- mSetSq[,colnames(mSetSq) %in% targets$sampleID] # Subset mSetSq for SVA
+annEPIC <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
 
 # Set output directory
 working_dir <- "/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/re-analysis/"
@@ -50,28 +51,11 @@ cellComp <- estimateCellCounts(rgSet_450k, compositeCellType = "DLPFC",
 cellCount <- data.frame(sampleID = row.names(cellComp), cellComp)   
 rownames(cellCount) = NULL
 head(cellCount)
+targets <- merge(targets, cellCount, by="sampleID") # Add cellCount to targets file
 write.table(cellCount, "cellCount_minfi.txt", sep="\t") 
 
 ### SVA ###
-# Load data
-
-
-mSetSq <- mSetSq[,colnames(mSetSq) %in% targets$sampleID] # Subset mSetSq for SVA
-cellCount <- "/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/cellCount_minfi.txt"
-cellCount <- read.table(cellCount, sep="\t", header=T) 
-
-# Add cellCount to targets file
-targets <- merge(targets, cellCount, by="sampleID")
-head(targets)
-
-# Get EPIC annotation data hg19
-annEPIC <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-annEPIC <- data.frame(annEPIC)
-annEPIC <- annEPIC[rownames(bVals),] # Subset and sort EPIC annotation data
-
-# Get EPIC annotation data hg38
-#annEPIC_38 <- fread("/data/ALS_50k/DNA_methylation/methylation/EPIC.anno.GRCh38.tsv")
-#annEPIC_38_bVals <- annEPIC_38[annEPIC_38$probeID %in% rownames(bVals),] 
+# Make sure to add principal components (from genotyping data) and Cell count estimation (from minfi) to targets file
 
 # Setting covariates
 sampleType <- as.factor(targets$sampleType)
@@ -90,21 +74,14 @@ head(design.null)
 Mvals <- getM(mSetSq)
 Mvals <- Mvals[!is.infinite(rowSums(Mvals)),]
 
-# Calculate the number of surrogate variables to estimate in a model
-#n.sv <- num.sv(Mvals, design, method = "leek")
-#print(paste("Number of significant surrogate variables is: ", n.sv, sep = ""))
-
-# Estimate surrogate variables using SVA
-sva_res <- sva(Mvals, design, design.null, method = "irw") #, n.sv = n.sv)
+# Estimate all significative surrogate variables using SVA
+sva_res <- sva(Mvals, design, design.null, method = "irw")
 s_vars <- sva_res$sv # Extract the surrogate variables
 colnames(s_vars) <- paste0("SV", 1:ncol(s_vars))
 head(s_vars)
 
 # Add SVs to targets file
 targets <- cbind(targets, s_vars)
-head(targets)
 
-# Save targets + SVs
+# Save targets
 write.table(targets, file=paste(outputdir,"targets.PC.SV.txt",sep=""), quote=FALSE)
-#targets <- read.table("setting_2B/targets.PC.SV.txt", sep="\t", header=T)
-
