@@ -1,3 +1,6 @@
+# Get differentially methylated probes and regions
+# Calculate lambda
+
 module load R/4.2.2
 R --vanilla --no-save
 
@@ -62,6 +65,18 @@ DMPs <- limma::topTable(fit2, num=Inf, coef=1, adjust="bonferroni", confint=TRUE
 DMPs_fdr <- limma::topTable(fit2, num=Inf, coef=1, adjust="fdr", confint=TRUE) # FDR adjusted p-values
 DMPs[c(1:5),c(1:5)]
 
+# Correct the p-values using the bacon (remove unknown bias and reduce inflation)
+fit2_bc <- fit2
+bc <- bacon(fit2_bc$t)
+
+# Extract bias and inflation corrected P-values
+fit2_bc$p.value <- pval(bc, corrected=TRUE)
+
+# Get differentially methylated probes (DMPs) table
+DMPs <- limma::topTable(fit2, num=Inf, coef=1, adjust="bonferroni", confint=TRUE)
+DMPs <- arrange(DMPs, adj.P.Val)
+DMPs_bacon <- limma::topTable(fit2_bc, num=Inf, coef=1, adjust="bonferroni", confint=TRUE) # Annotate and explore bacon corrected DMPs_bacon as shown below for DMPs
+
 # Annotate DMPs
 # Join the data frames based on row names of df1 and id column of df2
 DMPs <- DMPs %>% 
@@ -97,8 +112,8 @@ head(results.ranges_all_df)
 # Save DMPs
 write.table(DMPs, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
 write.table(DMPs_fdr, file=paste(outputdir , "DMPs_fdr.txt", sep=""),row.names = TRUE)
+write.table(DMPs_bacon, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
 write.table(results.ranges_all_df, file=paste(outputdir_DMR,"results.ranges_all.txt", sep=""), sep="\t",quote=F, col.names=T,row.names=T)
-
 
 ## Calculate lambda/lambda 1000
 # Load data
