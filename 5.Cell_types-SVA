@@ -27,11 +27,11 @@ library(stringr)
 library(ggrepel)
 
 ## Cell type ##
-# Load data (pre normalization)
+# Load data
+outputdir <- "/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/"
 load(file.path(outputdir, "QC_preNorm.Rda"))
-targets <- "/data/ALS_50k/DNA_methylation/methylation/outputAnalysis_FINAL/targets_ctrl_lbd_PCA.txt"
-targets <- read.table(targets, sep="\t", header=T) 
-rgSet <- rgSet[,colnames(rgSet) %in% targets$sampleID]
+load(file.path("/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/mSetSq_forSVA.Rda")) # Load mSetSq for SVA
+mSetSq <- mSetSq[,colnames(mSetSq) %in% targets$sampleID] # Subset mSetSq for SVA
 
 # Set output directory
 working_dir <- "/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/re-analysis/"
@@ -54,11 +54,8 @@ write.table(cellCount, "cellCount_minfi.txt", sep="\t")
 
 ### SVA ###
 # Load data
-load(file.path("/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/mSetSq_forSVA.Rda")) # Load mSetSq for SVA
-load(file.path("/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/getBeta_EPIC.Rda")) # Load betas
-targets <- "/data/ALS_50k/DNA_methylation/methylation/outputAnalysis_FINAL/targets_ctrl_lbd_PCA.txt"
-targets <- read.table(targets, sep="\t", header=T) 
-bVals <- bVals[,colnames(bVals) %in% targets$sampleID]
+
+
 mSetSq <- mSetSq[,colnames(mSetSq) %in% targets$sampleID] # Subset mSetSq for SVA
 cellCount <- "/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/cellCount_minfi.txt"
 cellCount <- read.table(cellCount, sep="\t", header=T) 
