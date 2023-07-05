@@ -109,7 +109,7 @@ results.ranges_all <- extractRanges(DMRs_all, genome = "hg19")
 results.ranges_all_df <- as.data.frame(results.ranges_all)
 head(results.ranges_all_df)
 
-# Save DMPs
+# Save data
 write.table(DMPs, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
 write.table(DMPs_fdr, file=paste(outputdir , "DMPs_fdr.txt", sep=""),row.names = TRUE)
 write.table(DMPs_bacon, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
