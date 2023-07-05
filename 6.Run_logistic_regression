@@ -1,1 +1,148 @@
+module load R/4.2.2
+R --vanilla --no-save
+
+# Load library
+library(minfi)
+library(limma)
+library(lumi)
+library(sva)
+library(bacon)
+library(wateRmelon)
+library(RColorBrewer)
+library(ggplot2)
+library(patchwork)
+library(IlluminaHumanMethylationEPICmanifest)
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+library(DMRcate)
+library(DMRcatedata)
+library(patchwork)
+require(data.table)
+require(tidyverse)
+library(dplyr)
+library(stringr)
+library(ggrepel)
+
+# Set directories
+working_dir <- "/data/ALS_50k/DNA_methylation/methylation/revision_03-2023/toTryDifferentSettings/"
+setwd(working_dir)
+dir.create("setting_2B")
+outputdir <- "setting_2B/"
+
+# Load data
+load(file.path("/data/ALS_50k/DNA_methylation/methylation/outputQC_04-25-22/getBeta_EPIC.Rda")) # Load betas
+targets <- read.table("setting_2B/targets.PC.SV.txt", sep="\t", header=T)
+
+# Setting covariates
+sampleType <- as.factor(targets$sampleType)
+age <- targets$Age
+sex <- as.factor(targets$Sex)
+batch <- factor(targets$Experiment_N)
+
+## Run logistic regression
+# Create a design matrix
+design <- model.matrix(~ 0 + sampleType + age + sex + batch + PC1 + PC2 + PC3 + PC4 + PC5 + NeuN_neg + NeuN_pos
+                        + SV1 + SV2 + SV3 + SV4 + SV5 + SV6 + SV7 + SV8 + SV9 + SV10
+                        + SV11 + SV12 + SV13 + SV14 + SV15 + SV16 + SV17 + SV18 + SV19 + SV20
+                        + SV21 + SV22 + SV23 + SV24 + SV25 + SV26 + SV27 + SV28 + SV29 + SV30
+                        + SV31 + SV32 + SV33 + SV34 + SV35 + SV36 + SV37 + SV38 + SV39 + SV40
+                        + SV41 + SV42 + SV43 + SV44 , data=targets)
+colnames(design)[1:2] <- c(levels(sampleType))
+
+# Analyse linear model
+fit <- lmFit(bVals, design) # Fit the linear model
+contMatrix <- makeContrasts(LBD-Control, levels=design) # Create a contrast matrix
+fit2 <- contrasts.fit(fit, contMatrix) # Fit the contrasts
+fit2 <- eBayes(fit2)
+
+# Summary of differentially methylated CpGs (FDR < 0.05)
+summary(decideTests(fit2))
+
+# Get differentially methylated probes (DMPs)
+DMPs <- limma::topTable(fit2, num=Inf, coef=1, adjust="bonferroni", confint=TRUE) # Bonferroni adjusted p-values
+DMPs_fdr <- limma::topTable(fit2, num=Inf, coef=1, adjust="fdr", confint=TRUE) # FDR adjusted p-values
+DMPs[c(1:5),c(1:5)]
+
+# Annotate DMPs
+# Join the data frames based on row names of df1 and id column of df2
+DMPs <- DMPs %>% 
+  rownames_to_column(var = "Name") %>%  # Convert row names to a column in df1
+  left_join(annEPIC, by = c("Name"))  # Join df1 and df2 by matching gene and id columns
+DMPs <- DMPs[order(DMPs$adj.P.Val),]
+
+# Explore the data
+dim(DMPs[DMPs$adj.P.Val < 0.05,]) # Check n. of significant probes 
+dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC > 0,]) # Check n. of significant probes with positive LogFC
+dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC < 0,]) # Check n. of significant probes with negative LogFC
+
+# Get differentially methylated regions (DMRs)
+dir.create(paste(outputdir,"DMR_analysis/", sep=""))
+outputdir_DMR <- paste(outputdir,"DMR_analysis/", sep="")
+
+# Get individually significant probes
+myAnnotation_all <- cpg.annotate(object = bVals, what = "B", 
+                        datatype = "array", arraytype= "EPIC", 
+                        array = "IlluminaHumanMethylationEPIC", annotation = "ilm10b2.hg19",
+                        analysis.type = "differential", design = design, 
+                        contrasts = TRUE, cont.matrix = contMatrix, 
+                        coef = "LBD - Control", fdr = 0.05)
+
+str(myAnnotation_all)
+
+# Use the dmrcate function to combine CpGs and identify differentially methylated regions
+DMRs_all <- dmrcate(myAnnotation_all, lambda=1000, C=2)
+results.ranges_all <- extractRanges(DMRs_all, genome = "hg19")
+results.ranges_all_df <- as.data.frame(results.ranges_all)
+head(results.ranges_all_df)
+
+# Save DMPs
+write.table(DMPs, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
+write.table(DMPs_fdr, file=paste(outputdir , "DMPs_fdr.txt", sep=""),row.names = TRUE)
+write.table(results.ranges_all_df, file=paste(outputdir_DMR,"results.ranges_all.txt", sep=""), sep="\t",quote=F, col.names=T,row.names=T)
+
+
+## Calculate lambda/lambda 1000
+# Load data
+glm <- DMPs
+
+# Load files
+centromere <- fread("/data/ALS_50k/DNA_methylation/methylation/centromere_GRC.UCSC.GenomicPositionsHG19.txt",header=T)
+vdj <- fread("/data/ALS_50k/DNA_methylation/methylation/vdj.hg19.txt", header=T)
+
+# Filter out variants in vdj and telomere regions: the alignment is likely to be not reliable in these regions
+vdj1 <- vdj[-2,] %>% select(c("chrom", "vdjStart", "vdjEnd"))
+vdj2 <- vdj[2,] %>% rename(vdjStart2=vdjStart,vdjEnd2=vdjEnd) %>% select(c("chrom", "vdjStart2", "vdjEnd2"))
+colnames(glm)[10] <- "chrom"
+colnames(glm)[11] <- "POS"
+colnames(glm)[7] <- "P"
+glm$chrom <- as.numeric(gsub("^.{0,3}", "", glm$chrom))
+glm <- glm %>% left_join(.,vdj1, by = "chrom") %>% left_join(., vdj2, by = "chrom")
+glm[1:5,1:5]
+
+# Filter out variants within those regions (apparently none of those regions in EPIC assay)
+glm <- glm %>% mutate(invdj1 = ifelse((!is.na(vdjStart) & !is.na(vdjEnd) & POS>vdjStart & POS<vdjEnd), TRUE, FALSE)) %>% filter(invdj1 == FALSE) %>% select(-c(invdj1, vdjStart, vdjEnd))
+glm <- glm %>% mutate(invdj2 = ifelse((!is.na(vdjStart2) & !is.na(vdjEnd2) & POS>vdjStart2 & POS<vdjEnd2), TRUE, FALSE)) %>% filter(invdj2 == FALSE) %>% select(-c(invdj2, vdjStart2, vdjEnd2))
+
+# Calculate lambda 
+print("Calculating lambda")
+p1 <- glm$P
+n1 <- length(glm$P)
+NoCases <- as.numeric(nrow(targets[targets$sampleType == "LBD",]))
+NoControls <- as.numeric(nrow(targets[targets$sampleType == "Control",]))
+x2obs_1 <- qchisq(as.numeric(as.character(p1)), 1, lower.tail = FALSE)
+x2exp_1 <- qchisq((1:n1)/n1, 1, lower.tail = FALSE)
+lambda <- median(x2obs_1)/median(x2exp_1)
+print(paste("Lambda(raw) = ", lambda, sep = ""))
+lambda1000 <- 1 + ( lambda -1 ) * (1/NoCases + 1/NoControls)/(1/1000 + 1/1000)
+print(paste("Lambda(1000) = ", lambda1000, sep = ""))
+
+# Graph QQ plot
+if(!require(qqman)){
+    install.packages("qqman")
+    library(qqman)
+}
+jpeg(paste(outputdir,"QQ_plot.jpeg", sep = ""))
+par(mar=c(5,6,4,1)+0.1)
+qq(glm$P, sub = bquote(lambda ~ '=' ~ .(signif(lambda, 4)) ~~ lambda[1000] ~ '=' ~.(signif(lambda1000, 4))), cex.lab=1.5, cex.axis=1.5, font.lab=2, font.axis=2, lwd=1.3, ylim = c(0,ceiling(-log10(min(glm$P)))))
+dev.off()
+
 
