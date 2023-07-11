@@ -73,9 +73,7 @@ detP <- detP[,keep]
 failedSamples <- rownames(outliers)[outliers$outliers == TRUE]
 write.table(failedSamples,file=paste(outputdir, "outliers_wateRmelon.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE)
 
-##########################################################################################
-
-# Filter out probes with high detection P-values and/or measured by a low number of beads.  pfilter (wateRmelon)
+# pfilter (wateRmelon)
 # Exclusion criteria (default setting):  
 # samples having 1 % of sites with a detection p-value greater than 0.05
 # sites with beadcount <3 in 5 % of samples 
@@ -86,8 +84,6 @@ keep <- colnames(rgSet)
 targets <- targets[targets$sampleID %in% keep,]
 failedSamples <- targets$sampleID[!targets$sampleID %in% keep]
 write.table(failedSamples,file=paste(outputdir, "pfilter_excluded_samples.txt", sep=""), sep="\t",col.names = FALSE, row.names = FALSE)
-
-##########################################################################################
 
 ### Save data
 save(rgSet, detP, targets, file=file.path(outputdir, "QC_preNorm.Rda"))
