@@ -51,7 +51,7 @@ design <- model.matrix(~ 0 + sampleType + age + sex + batch + PC1 + PC2 + PC3 + 
                         + SV41 + SV42 + SV43 + SV44 , data=targets)
 colnames(design)[1:2] <- c(levels(sampleType))
 
-# Analyse linear model
+# Fit the linear model
 fit <- lmFit(bVals, design) # Fit the linear model
 contMatrix <- makeContrasts(LBD-Control, levels=design) # Create a contrast matrix
 fit2 <- contrasts.fit(fit, contMatrix) # Fit the contrasts
@@ -88,6 +88,43 @@ DMPs <- DMPs[order(DMPs$adj.P.Val),]
 dim(DMPs[DMPs$adj.P.Val < 0.05,]) # Check n. of significant probes 
 dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC > 0,]) # Check n. of significant probes with positive LogFC
 dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC < 0,]) # Check n. of significant probes with negative LogFC
+
+#################### Sex-specific analysis (block below) ####################
+
+    # Add covariate sampleType_sex to tragets
+    taregets$sampletType_sex <- paste(targets$sampleType, targets$Sex, sep="_")
+
+    # Setting covariates
+    sampleType_sex <- factor(targets$sampletType_sex, levels=c("Control_F","Control_M","LBD_F","LBD_M"))
+    age <- targets$Age
+    batch <- factor(targets$Experiment_N)
+
+    # Create a design matrix
+    design <- model.matrix(~0 + sampleType_sex + age + batch + PC1 + PC2 + PC3 + PC4 + PC5 + NeuN_neg + NeuN_pos
+                        + SV1 + SV2 + SV3 + SV4 + SV5 + SV6 + SV7 + SV8 + SV9 + SV10
+                        + SV11 + SV12 + SV13 + SV14 + SV15 + SV16 + SV17 + SV18 + SV19 + SV20
+                        + SV21 + SV22 + SV23 + SV24 + SV25 + SV26 + SV27 + SV28 + SV29 + SV30
+                        + SV31 + SV32 + SV33 + SV34 + SV35 + SV36 + SV37 + SV38 + SV39 + SV40
+                        + SV41 + SV42 + SV43 + SV44 , data=targets)
+
+    colnames(design)[1:4] <- levels(sampleType_sex)
+
+    # Fit the linear model
+    fit <- lmFit(bVals, design) 
+    contMatrix <- makeContrasts(males = LBD_M-Control_M,
+                            females = LBD_F-Control_F,
+                            Diff=(LBD_M-Control_M)-(LBD_F-Control_F),
+                            levels=design) # Create a contrast matrix 
+    fit2 <- contrasts.fit(fit, contMatrix) # Fit the contrasts
+    fit2 <- eBayes(fit2)
+
+    # Summary of differentially methylated CpGs (FDR < 0.05)
+    summary(decideTests(fit2))
+
+    # Get differentially methylated probes (DMPs)
+    DMPs_sexSpecific <- limma::topTable(fit2, num=Inf, coef=1, adjust="bonferroni", confint=TRUE)
+
+#################### Sex-specific analysis (block above) ####################
 
 # Get differentially methylated regions (DMRs)
 dir.create(paste(outputdir,"DMR_analysis/", sep=""))
