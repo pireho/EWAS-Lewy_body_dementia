@@ -89,6 +89,32 @@ dim(DMPs[DMPs$adj.P.Val < 0.05,]) # Check n. of significant probes
 dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC > 0,]) # Check n. of significant probes with positive LogFC
 dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC < 0,]) # Check n. of significant probes with negative LogFC
 
+# Get differentially methylated regions (DMRs)
+dir.create(paste(outputdir,"DMR_analysis/", sep=""))
+outputdir_DMR <- paste(outputdir,"DMR_analysis/", sep="")
+
+# Get individually significant probes
+myAnnotation_all <- cpg.annotate(object = bVals, what = "B", 
+                        datatype = "array", arraytype= "EPIC", 
+                        array = "IlluminaHumanMethylationEPIC", annotation = "ilm10b2.hg19",
+                        analysis.type = "differential", design = design, 
+                        contrasts = TRUE, cont.matrix = contMatrix, 
+                        coef = "LBD - Control", fdr = 0.05)
+
+str(myAnnotation_all)
+
+# Use the dmrcate function to combine CpGs and identify differentially methylated regions
+DMRs_all <- dmrcate(myAnnotation_all, lambda=1000, C=2)
+results.ranges_all <- extractRanges(DMRs_all, genome = "hg19")
+results.ranges_all_df <- as.data.frame(results.ranges_all)
+head(results.ranges_all_df)
+
+# Save data
+write.table(DMPs, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
+write.table(DMPs_fdr, file=paste(outputdir , "DMPs_fdr.txt", sep=""),row.names = TRUE)
+write.table(DMPs_bacon, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
+write.table(results.ranges_all_df, file=paste(outputdir_DMR,"results.ranges_all.txt", sep=""), sep="\t",quote=F, col.names=T,row.names=T)
+
 #################### Sex-specific analysis (block below) ####################
 
     # Add covariate sampleType_sex to tragets
@@ -124,33 +150,29 @@ dim(DMPs[DMPs$adj.P.Val < 0.05 & DMPs$logFC < 0,]) # Check n. of significant pro
     # Get differentially methylated probes (DMPs)
     DMPs_sexSpecific <- limma::topTable(fit2, num=Inf, coef=1, adjust="bonferroni", confint=TRUE)
 
+    # Get differentially methylated regions (DMRs)
+    dir.create(paste(outputdir,"DMR_analysis/", sep=""))
+    outputdir_DMR <- paste(outputdir,"DMR_analysis/", sep="")
+
+    # Get individually significant probes
+    myAnnotation_all <- cpg.annotate(object = bVals, what = "B", 
+                            datatype = "array", arraytype= "EPIC", 
+                            array = "IlluminaHumanMethylationEPIC", annotation = "ilm10b2.hg19",
+                            analysis.type = "differential", design = design, 
+                            contrasts = TRUE, cont.matrix = contMatrix, 
+                            coef = "Diff", fdr = 0.05)
+
+    str(myAnnotation_all)
+
+    # Use the dmrcate function to combine CpGs to identify differentially methylated regions
+    DMRs_all <- dmrcate(myAnnotation_all, lambda=1000, C=2)
+    results.ranges_all <- extractRanges(DMRs_all, genome = "hg19")
+    results.ranges_all_df <- as.data.frame(results.ranges_all)
+    head(results.ranges_all_df)
+
+    write.table(results.ranges_all_df, file=paste(outputdir_DMR,"results.ranges_all.txt", sep=""), sep="\t",quote=F, col.names=T,row.names=T)
+
 #################### Sex-specific analysis (block above) ####################
-
-# Get differentially methylated regions (DMRs)
-dir.create(paste(outputdir,"DMR_analysis/", sep=""))
-outputdir_DMR <- paste(outputdir,"DMR_analysis/", sep="")
-
-# Get individually significant probes
-myAnnotation_all <- cpg.annotate(object = bVals, what = "B", 
-                        datatype = "array", arraytype= "EPIC", 
-                        array = "IlluminaHumanMethylationEPIC", annotation = "ilm10b2.hg19",
-                        analysis.type = "differential", design = design, 
-                        contrasts = TRUE, cont.matrix = contMatrix, 
-                        coef = "LBD - Control", fdr = 0.05)
-
-str(myAnnotation_all)
-
-# Use the dmrcate function to combine CpGs and identify differentially methylated regions
-DMRs_all <- dmrcate(myAnnotation_all, lambda=1000, C=2)
-results.ranges_all <- extractRanges(DMRs_all, genome = "hg19")
-results.ranges_all_df <- as.data.frame(results.ranges_all)
-head(results.ranges_all_df)
-
-# Save data
-write.table(DMPs, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
-write.table(DMPs_fdr, file=paste(outputdir , "DMPs_fdr.txt", sep=""),row.names = TRUE)
-write.table(DMPs_bacon, file=paste(outputdir , "DMPs.txt", sep=""),row.names = TRUE)
-write.table(results.ranges_all_df, file=paste(outputdir_DMR,"results.ranges_all.txt", sep=""), sep="\t",quote=F, col.names=T,row.names=T)
 
 ## Calculate lambda/lambda 1000
 # Load data
