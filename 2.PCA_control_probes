@@ -1,8 +1,9 @@
+#############################################################
 # Perform PCA on the control probes present on Illumina array.
-# See reference publications for additional information: 
+# See reference publication for additional information: 
 # PMID: 25853392
-# Benjamin Lehne et al., A coherent approach for analysis of the Illumina HumanMethylation450 BeadChip improves data quality and performance in epigenome-wide association studies
-# Genome Biol. 2015 Feb 15;16(1):37
+# Benjamin Lehne et al., A coherent approach for analysis of the Illumina HumanMethylation450 BeadChip improves data quality and performance in epigenome-wide association studies. Genome Biol. 2015 Feb 15;16(1):37
+#############################################################
 
 module load R/4.0.5
 R --vanilla --no-save
