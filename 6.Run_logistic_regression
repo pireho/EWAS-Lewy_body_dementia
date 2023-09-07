@@ -232,8 +232,8 @@ setwd(working_dir)
 # Load gene list (bonferroni + fdr genes)
 gene_list <- c("ARSB","NCRNA00173","MGRN1","FHL2","NIPBL","IQSEC1","RP11-1E6.1","MTMR4","SLC39A5","U2AF1","KIF22",
                 "ZNF552","EPS8","MFAP4","PLCG1","ARL6IP1","MCM4","PRKDC","DLG5","PUF60","EVC","FRMD4A","UNC5A",
-                "LFNG","EOHA8","NCOA2","TSC2","ZCCHC3","RNF39","RASGEF1B","TTC16","PTRH1","DPF3","CLASP1","PALM",
-                "FOXP4","FOXP4-AS1","PANTR1","LRRC28","LNC00856","CCDC63","MKL2","RPS24","CHKA")
+                "LFNG","EPHA8","NCOA2","TSC2","ZCCHC3","RNF39","TTC16","PTRH1","DPF3","CLASP1","PALM",
+                "FOXP4","FOXP4-AS1","PANTR1","LRRC28","LINC00856","CCDC63","MKL2","RPS24","CHKA")
 # Run gProfiler 
 gostres_all <- gost(query = gene_list, organism = "hsapiens", ordered_query = TRUE, 
                     multi_query = FALSE, significant = TRUE, exclude_iea = FALSE, 
