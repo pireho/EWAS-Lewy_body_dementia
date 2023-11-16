@@ -38,7 +38,7 @@ osca --befile ewas --upper-beta 0.975 --lower-beta 0.025 --covar ewas.covar --qc
 
 ##### Running the EWAS #####
 
-# MOA analysis (usign adjusted ewas dataset)
-osca --moa --befile ewas_adj --pheno ewas.phen  --out ewas_adj_MOA
+# MOA analysis (usign adjusted ewas dataset). It outputs a file.moa
+osca --moa --befile ewas_adj --pheno ewas.phen  --out ewas_adj
 
 
