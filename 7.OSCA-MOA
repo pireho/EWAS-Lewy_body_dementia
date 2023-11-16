@@ -20,11 +20,11 @@ tail -n +2 annEPIC_38.txt | awk '{print $3,$2,$4,$37,"NA"}' > ewas.opi
 # Make bod-file:
 osca --tefile bVals.txt --methylation-beta --make-bod --no-fid --out ewas
 
-## 4. Create covariate files
-# Sex and batch 
+## 4. Create covariate(s) files
+# Create discrete covariate(s) file: Sex and batch 
 tail -n +2 targets.txt | awk '{print $1,$1,$14,$6}' > ewas.covar
 
-# Age, PCs (from genotpying) and cell proportions (quantitative covariates)
+# Create quantitative covariate(s) file: Age, PCs (from genotpying) and cell type proportions
 tail -n +2 targets.txt | awk '{print $1,$1,$5,$17,$18,$19,$20,$21,$29,$30}' > ewas.qcovar
 
 # Make pheno file
