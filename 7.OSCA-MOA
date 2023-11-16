@@ -30,11 +30,11 @@ tail -n +2 targets.txt | awk '{print $1,$1,$5,$17,$18,$19,$20,$21,$29,$30}' > ew
 # Make pheno file
 tail -n +2 targets.txt | awk '{print $1,$1,$15}' > ewas.phen
 
-## 5. Adjust betas for covariates (for MOA): 
-osca --befile ewas --upper-beta 0.975 --lower-beta 0.025 --covar ewas.covar --qcovar ewas.qcovar --adj-probe --make-bod --out ewas_adj
-
-## 6. Update probe annotation
+## 5. Update probe annotation
 osca --befile ewas --update-opi ewas.opi
+
+## 6. Adjust betas for covariates (for MOA): 
+osca --befile ewas --upper-beta 0.975 --lower-beta 0.025 --covar ewas.covar --qcovar ewas.qcovar --adj-probe --make-bod --out ewas_adj
 
 ##### Running the EWAS #####
 
