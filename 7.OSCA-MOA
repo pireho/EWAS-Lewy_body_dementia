@@ -33,10 +33,10 @@ tail -n +2 targets.txt | awk '{print $1,$1,$15}' > ewas.phen
 ## 5. Update probe annotation
 osca --befile ewas --update-opi ewas.opi
 
-## 6. Adjust betas for covariates (for MOA): 
+## 6. Adjust beta values 
 osca --befile ewas --upper-beta 0.975 --lower-beta 0.025 --covar ewas.covar --qcovar ewas.qcovar --adj-probe --make-bod --out ewas_adj
 
-##### Running the EWAS #####
+##### Run the EWAS #####
 
 # MOA analysis (usign adjusted ewas dataset). It outputs a file.moa
 osca --moa --befile ewas_adj --pheno ewas.phen  --out ewas_adj
