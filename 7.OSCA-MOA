@@ -1,3 +1,44 @@
 ### See reference at https://yanglab.westlake.edu.cn/software/osca/#MOA
 
+# Load modules
+module load gcc/8.5.0
+
+##### Create input files #####
+
+## 1.Get the file.oii from targets
+# Columns are: family ID, individual ID, paternal ID, maternal ID and sex (1=male; 2=female; 0=unknown). 
+# Missing data are represented by "NA".
+tail -n +2 targets.txt | awk '{print $10,$11,"NA","NA",$14}' > ewas.oii
+
+## 2. Get the file.opi from EPIC annotation file (filter bVals probes only from EWAS)
+# Columns are: chromosome, probe ID, physical position, gene ID and gene orientation.
+tail -n +2 annEPIC_38.txt | awk '{print $3,$2,$4,$37,"NA"}' > ewas.opi
+
+## 3. Get the BOD file
+#Add "IID" as rowname of the first row of bVals 
+#sed -i '1s/^/IID /' bVals.txt > bVals_new.txt
+# Make bod-file:
+osca --tefile bVals.txt --methylation-beta --make-bod --no-fid --out ewas
+
+## 4. Create covariate files
+# Sex and batch 
+tail -n +2 targets.txt | awk '{print $1,$1,$14,$6}' > ewas.covar
+
+# Age, PCs (from genotpying) and cell proportions (quantitative covariates)
+tail -n +2 targets.txt | awk '{print $1,$1,$5,$17,$18,$19,$20,$21,$29,$30}' > ewas.qcovar
+
+# Make pheno file
+tail -n +2 targets.txt | awk '{print $1,$1,$15}' > ewas.phen
+
+## 5. Adjust betas for covariates (for MOA): 
+osca --befile ewas --upper-beta 0.975 --lower-beta 0.025 --covar ewas.covar --qcovar ewas.qcovar --adj-probe --make-bod --out ewas_adj
+
+## 6. Update probe annotation
+osca --befile ewas --update-opi ewas.opi
+
+##### Running the EWAS #####
+
+# MOA analysis (usign adjusted ewas dataset)
+osca --moa --befile ewas_adj --pheno ewas.phen  --out ewas_adj_MOA
+
 
